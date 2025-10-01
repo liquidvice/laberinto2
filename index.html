@@ -201,16 +201,18 @@ function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   grid.forEach(c => c.draw());
   
-  // Jugador
-  ctx.fillStyle = "yellow";
-  ctx.fillRect(player.x*cellSize+cellSize*0.25, player.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
-  
+  // Jugador (princesa 👸)
+  ctx.font = `${cellSize*0.7}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
+
   // Meta
   ctx.fillStyle = "red";
   ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
   
-  // Dibujar tazas ☕
-  ctx.font = `${cellSize*0.8}px Arial`;
+  // Dibujar tazas ☕ (más chicas)
+  ctx.font = `${cellSize*0.5}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   teas.forEach(t => {
@@ -241,7 +243,6 @@ function movePlayer(e) {
     return true;
   });
 
-  // 🚫 Verificar si intenta salir sin todas las tazas
   if (player.x==goal.x && player.y==goal.y) {
     if (teas.length > 0) {
       warning.textContent = "⚠️ Te faltan tazas por recoger";
