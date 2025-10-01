@@ -6,276 +6,199 @@
 <title>Alicia en el Laberinto</title>
 <style>
   body {
+    font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #3b0066, #8a2be2);
-    margin: 0;
-    padding: 0;
-    font-family: 'Trebuchet MS', sans-serif;
     color: #fff;
     display: flex;
     flex-direction: column;
     align-items: center;
-  }
-  #scoreboard {
-    margin: 10px;
-    font-size: 20px;
-    font-weight: bold;
-  }
-  #gameContainer {
-    display: flex;
-    flex-direction: row;
     justify-content: center;
-    align-items: flex-start;
-    position: relative;
+    min-height: 100vh;
+    margin: 0;
   }
-  #mazeCanvas {
-    border: 3px solid white;
-    background: #111;
-    margin: 20px;
+  #scoreboard, #timer, #warning, #finalMessage, #levelMessage {
+    margin: 5px 0;
+    text-align: center;
   }
-  #controls {
+  #maze {
+    display: grid;
+    grid-gap: 2px;
+    margin: 10px 0;
+  }
+  .cell {
+    width: 50px;
+    height: 50px;
+    background: #444;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 20px;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
   }
+  .goal { background: #28a745; }
+  .tea { background: #ffc107; }
   button {
-    padding: 10px;
-    font-size: 16px;
+    padding: 8px 16px;
+    margin: 5px;
     border-radius: 8px;
     border: none;
-    cursor: pointer;
     background-color: #8a2be2;
     color: white;
-    transition: 0.3s;
+    font-size: 16px;
+    cursor: pointer;
   }
-  button:hover {
-    background-color: #5e1b96;
-  }
-  #finalMessage {
-    font-size: 24px;
-    font-weight: bold;
-    margin-top: 20px;
-    text-align: center;
-  }
-  #timer {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    font-size: 18px;
-    font-weight: bold;
-    color: #fff;
-    background: rgba(0,0,0,0.5);
-    padding: 5px 10px;
-    border-radius: 8px;
-  }
-  #warning {
-    font-size: 18px;
-    font-weight: bold;
-    color: yellow;
-    margin-top: 10px;
-    text-align: center;
-  }
+  button:hover { background-color: #5e1b96; }
 </style>
 </head>
 <body>
-  <div id="scoreboard">Nivel: 1 | Puntaje: 0 | Mejor: 0</div>
-  <div id="gameContainer">
-    <canvas id="mazeCanvas" width="600" height="600"></canvas>
-    <div id="controls">
-      <button onclick="restartGame()">Reiniciar</button>
-      <button onclick="newMaze()">Nuevo laberinto</button>
-    </div>
-    <div id="timer">Tiempo: 0s | Mejor: 0s</div>
-  </div>
+  <h1>Alicia en el Laberinto</h1>
+  <div id="scoreboard">Puntaje: 0 | Mejor: 0</div>
+  <div id="timer">Tiempo: 0 s | Mejor: 0 s</div>
   <div id="warning"></div>
+  <div id="levelMessage"></div>
+  <div id="maze"></div>
   <div id="finalMessage"></div>
+  <button onclick="restartGame()">Reiniciar</button>
+  <button onclick="newMaze()">Nuevo Laberinto</button>
 
 <script>
-const canvas = document.getElementById("mazeCanvas");
-const ctx = canvas.getContext("2d");
-const scoreboard = document.getElementById("scoreboard");
-const finalMessage = document.getElementById("finalMessage");
+const mazeContainer = document.getElementById("maze");
+const scoreDisplay = document.getElementById("scoreboard");
 const timerDisplay = document.getElementById("timer");
 const warning = document.getElementById("warning");
+const finalMessage = document.getElementById("finalMessage");
+const levelMessage = document.getElementById("levelMessage");
 
-let rows = 10;
-let cols = 10;
-let cellSize;
-let grid = [];
-let player = {x:0, y:0};
-let goal;
+let rows = 5, cols = 5;
+let player = { x: 0, y: 0 };
+let goal = { x: 4, y: 4 };
+let teas = [];
 let score = 0;
 let bestScore = localStorage.getItem("bestScore") || 0;
-let level = 1;
-let maxLevel = 5; 
-let teas = [];
-
-let startTime;
-let elapsedTime = 0;
 let bestTime = localStorage.getItem("bestTime") || 0;
-let timerInterval;
+let level = 1;
+let maxLevel = 5;
+let timer = 0, timerInterval, elapsedTime = 0;
 
-class Cell {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.walls = [true, true, true, true];
-    this.visited = false;
-  }
-  draw() {
-    let x = this.x * cellSize;
-    let y = this.y * cellSize;
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    if (this.walls[0]) drawLine(x, y, x + cellSize, y);
-    if (this.walls[1]) drawLine(x + cellSize, y, x + cellSize, y + cellSize);
-    if (this.walls[2]) drawLine(x + cellSize, y + cellSize, x, y + cellSize);
-    if (this.walls[3]) drawLine(x, y + cellSize, x, y);
-  }
-}
-
-function drawLine(x1, y1, x2, y2) {
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-}
+scoreDisplay.textContent = `Puntaje: ${score} | Mejor: ${bestScore}`;
+timerDisplay.textContent = `Tiempo: ${timer} s | Mejor: ${bestTime} s`;
 
 function setupMaze() {
-  cellSize = Math.floor(canvas.width / cols);
-  grid = [];
+  mazeContainer.innerHTML = "";
+  mazeContainer.style.gridTemplateColumns = `repeat(${cols}, 50px)`;
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
-      grid.push(new Cell(x, y));
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+      cell.id = `cell-${x}-${y}`;
+      mazeContainer.appendChild(cell);
     }
   }
-  player = {x:0, y:0};
-  goal = {x: cols-1, y: rows-1};
+  player = { x: 0, y: 0 };
+  goal = { x: cols - 1, y: rows - 1 };
   teas = [];
-  for (let i=0; i<Math.floor(rows/2); i++) {
-    teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
+  for (let i = 0; i < Math.floor((rows * cols) / 6); i++) {
+    let tx, ty;
+    do {
+      tx = Math.floor(Math.random() * cols);
+      ty = Math.floor(Math.random() * rows);
+    } while ((tx === 0 && ty === 0) || (tx === goal.x && ty === goal.y) || teas.some(t => t.x === tx && t.y === ty));
+    teas.push({ x: tx, y: ty });
   }
-  generateMaze(grid[0]);
   drawMaze();
-  if (level === 1) {
-    elapsedTime = 0;
-    startTime = Date.now();
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-      updateScoreboard();
-    }, 1000);
-  }
-  updateScoreboard();
-}
-
-function index(x, y) {
-  if (x < 0 || y < 0 || x > cols-1 || y > rows-1) return -1;
-  return x + y * cols;
-}
-
-function generateMaze(cell) {
-  cell.visited = true;
-  let neighbors = [
-    {cell: grid[index(cell.x, cell.y-1)], dir:0},
-    {cell: grid[index(cell.x+1, cell.y)], dir:1},
-    {cell: grid[index(cell.x, cell.y+1)], dir:2},
-    {cell: grid[index(cell.x-1, cell.y)], dir:3}
-  ];
-  neighbors = neighbors.filter(n => n.cell && !n.cell.visited);
-  while (neighbors.length > 0) {
-    let next = neighbors[Math.floor(Math.random()*neighbors.length)];
-    cell.walls[next.dir] = false;
-    next.cell.walls[(next.dir+2)%4] = false;
-    generateMaze(next.cell);
-    neighbors = [
-      {cell: grid[index(cell.x, cell.y-1)], dir:0},
-      {cell: grid[index(cell.x+1, cell.y)], dir:1},
-      {cell: grid[index(cell.x, cell.y+1)], dir:2},
-      {cell: grid[index(cell.x-1, cell.y)], dir:3}
-    ].filter(n => n.cell && !n.cell.visited);
-  }
+  clearInterval(timerInterval);
+  if (level === 1) elapsedTime = 0;
+  timer = 0;
+  timerDisplay.textContent = `Tiempo: ${timer} s | Mejor: ${bestTime} s`;
+  timerInterval = setInterval(() => {
+    timer++;
+    elapsedTime++;
+    timerDisplay.textContent = `Tiempo: ${timer} s | Mejor: ${bestTime} s`;
+  }, 1000);
 }
 
 function drawMaze() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  grid.forEach(c => c.draw());
-  ctx.fillStyle = "yellow";
-  ctx.fillRect(player.x*cellSize+cellSize*0.25, player.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
-  ctx.fillStyle = "red";
-  ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
-  ctx.fillStyle = "cyan";
-  teas.forEach(t => ctx.fillRect(t.x*cellSize+cellSize*0.3, t.y*cellSize+cellSize*0.3, cellSize*0.4, cellSize*0.4));
+  document.querySelectorAll(".cell").forEach(c => {
+    c.className = "cell";
+    c.textContent = "";
+  });
+  document.getElementById(`cell-${player.x}-${player.y}`).textContent = "👸"; // Princesa
+  const goalCell = document.getElementById(`cell-${goal.x}-${goal.y}`);
+  goalCell.classList.add("goal");
+  goalCell.textContent = "🏰"; // Castllo
+  teas.forEach(t => {
+    const teaCell = document.getElementById(`cell-${t.x}-${t.y}`);
+    teaCell.classList.add("tea");
+    teaCell.textContent = "☕"; // Taza
+  });
 }
 
-document.addEventListener("keydown", movePlayer);
+function move(dx, dy) {
+  let nx = player.x + dx;
+  let ny = player.y + dy;
+  if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+    player.x = nx;
+    player.y = ny;
+    teas = teas.filter(t => {
+      if (t.x === player.x && t.y === player.y) {
+        score++;
+        scoreDisplay.textContent = `Puntaje: ${score} | Mejor: ${bestScore}`;
+        return false;
+      }
+      return true;
+    });
+    drawMaze();
 
-function movePlayer(e) {
-  let dx=0, dy=0;
-  if (e.key=="ArrowUp") dy=-1;
-  if (e.key=="ArrowDown") dy=1;
-  if (e.key=="ArrowLeft") dx=-1;
-  if (e.key=="ArrowRight") dx=1;
-  let current = grid[index(player.x, player.y)];
-  if (dx==0 && dy==-1 && !current.walls[0]) player.y--;
-  if (dx==1 && dy==0 && !current.walls[1]) player.x++;
-  if (dx==0 && dy==1 && !current.walls[2]) player.y++;
-  if (dx==-1 && dy==0 && !current.walls[3]) player.x--;
-
-  teas = teas.filter(t => {
-    if (t.x==player.x && t.y==player.y) {
-      score+=10;
-      updateScoreboard();
-      return false;
-    }
-    return true;
-  });
-
-  // 🚫 Verificar si intenta salir sin todas las tazas
-  if (player.x==goal.x && player.y==goal.y) {
-    if (teas.length > 0) {
-      warning.textContent = "⚠️ Te faltan tazas por recoger";
-      setTimeout(() => { warning.textContent = ""; }, 2000);
-    } else {
-      warning.textContent = "";
-      if (level < maxLevel) {
-        level++;
-        rows += 2;
-        cols += 2;
-        setupMaze();
+    if (player.x === goal.x && player.y === goal.y) {
+      if (teas.length > 0) {
+        warning.textContent = "⚠️ Te faltan tazas por recoger";
+        setTimeout(() => { warning.textContent = ""; }, 2000);
       } else {
-        clearInterval(timerInterval);
-        if (elapsedTime < bestTime || bestTime == 0) {
-          bestTime = elapsedTime;
-          localStorage.setItem("bestTime", bestTime);
+        warning.textContent = "";
+        if (level < maxLevel) {
+          levelMessage.textContent = `Nivel ${level} completado 🎉`;
+          setTimeout(() => {
+            levelMessage.textContent = "";
+            level++;
+            rows += 2;
+            cols += 2;
+            setupMaze();
+          }, 1500);
+        } else {
+          clearInterval(timerInterval);
+          if (elapsedTime < bestTime || bestTime == 0) {
+            bestTime = elapsedTime;
+            localStorage.setItem("bestTime", bestTime);
+          }
+          if (score > bestScore) {
+            bestScore = score;
+            localStorage.setItem("bestScore", bestScore);
+          }
+          finalMessage.innerHTML = `🎉 ¡Ganaste!<br>Puntaje: ${score} | Mejor: ${bestScore}<br>Tiempo total: ${elapsedTime}s | Mejor tiempo: ${bestTime}s`;
         }
-        if (score > bestScore) {
-          bestScore = score;
-          localStorage.setItem("bestScore", bestScore);
-        }
-        finalMessage.innerHTML = `🎉 ¡Ganaste! Puntaje: ${score} | Mejor: ${bestScore} | Tiempo total: ${elapsedTime}s | Mejor tiempo: ${bestTime}s`;
       }
     }
   }
-  drawMaze();
 }
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowUp") move(0, -1);
+  if (e.key === "ArrowDown") move(0, 1);
+  if (e.key === "ArrowLeft") move(-1, 0);
+  if (e.key === "ArrowRight") move(1, 0);
+});
 
 function restartGame() {
   score = 0;
   level = 1;
-  rows = 10;
-  cols = 10;
+  rows = 5;
+  cols = 5;
   finalMessage.innerHTML = "";
+  levelMessage.textContent = "";
   setupMaze();
 }
 
 function newMaze() {
   setupMaze();
-}
-
-function updateScoreboard() {
-  scoreboard.textContent = `Nivel: ${level} | Puntaje: ${score} | Mejor: ${bestScore}`;
-  timerDisplay.textContent = `Tiempo: ${elapsedTime}s | Mejor: ${bestTime}s`;
 }
 
 setupMaze();
