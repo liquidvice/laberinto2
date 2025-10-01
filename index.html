@@ -68,6 +68,13 @@
     padding: 5px 10px;
     border-radius: 8px;
   }
+  #warning {
+    font-size: 18px;
+    font-weight: bold;
+    color: yellow;
+    margin-top: 10px;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -80,6 +87,7 @@
     </div>
     <div id="timer">Tiempo: 0s | Mejor: 0s</div>
   </div>
+  <div id="warning"></div>
   <div id="finalMessage"></div>
 
 <script>
@@ -88,6 +96,7 @@ const ctx = canvas.getContext("2d");
 const scoreboard = document.getElementById("scoreboard");
 const finalMessage = document.getElementById("finalMessage");
 const timerDisplay = document.getElementById("timer");
+const warning = document.getElementById("warning");
 
 let rows = 10;
 let cols = 10;
@@ -98,7 +107,7 @@ let goal;
 let score = 0;
 let bestScore = localStorage.getItem("bestScore") || 0;
 let level = 1;
-const maxLevel = 5;
+let maxLevel = 5; // ahora son 5 niveles
 let teas = [];
 
 let startTime;
@@ -148,13 +157,15 @@ function setupMaze() {
   }
   generateMaze(grid[0]);
   drawMaze();
-  elapsedTime = 0;
-  startTime = Date.now();
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-    updateScoreboard();
-  }, 1000);
+  if (level === 1) {
+    elapsedTime = 0;
+    startTime = Date.now();
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+      updateScoreboard();
+    }, 1000);
+  }
   updateScoreboard();
 }
 
@@ -220,24 +231,30 @@ function movePlayer(e) {
     return true;
   });
 
+  // 🚫 Verificar si intenta salir sin todas las tazas
   if (player.x==goal.x && player.y==goal.y) {
-    clearInterval(timerInterval);
-    if (elapsedTime < bestTime || bestTime == 0) {
-      bestTime = elapsedTime;
-      localStorage.setItem("bestTime", bestTime);
-    }
-
-    if (level < maxLevel) {
-      level++;
-      rows += 2;
-      cols += 2;
-      setupMaze();
+    if (teas.length > 0) {
+      warning.textContent = "⚠️ Te faltan tazas por recoger";
+      setTimeout(() => { warning.textContent = ""; }, 2000);
     } else {
-      if (score > bestScore) {
-        bestScore = score;
-        localStorage.setItem("bestScore", bestScore);
+      warning.textContent = "";
+      if (level < maxLevel) {
+        level++;
+        rows += 2;
+        cols += 2;
+        setupMaze();
+      } else {
+        clearInterval(timerInterval);
+        if (elapsedTime < bestTime || bestTime == 0) {
+          bestTime = elapsedTime;
+          localStorage.setItem("bestTime", bestTime);
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          localStorage.setItem("bestScore", bestScore);
+        }
+        finalMessage.innerHTML = `🎉 ¡Ganaste! Puntaje: ${score} | Mejor: ${bestScore} | Tiempo total: ${elapsedTime}s | Mejor tiempo: ${bestTime}s`;
       }
-      finalMessage.innerHTML = `¡Ganaste! Puntaje: ${score} | Mejor: ${bestScore} | Tiempo: ${elapsedTime}s | Mejor tiempo: ${bestTime}s`;
     }
   }
   drawMaze();
