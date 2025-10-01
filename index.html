@@ -1,1 +1,267 @@
-# laberinto2
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alicia en el Laberinto</title>
+<style>
+  body {
+    background: linear-gradient(135deg, #3b0066, #8a2be2);
+    margin: 0;
+    padding: 0;
+    font-family: 'Trebuchet MS', sans-serif;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #scoreboard {
+    margin: 10px;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  #gameContainer {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    position: relative;
+  }
+  #mazeCanvas {
+    border: 3px solid white;
+    background: #111;
+    margin: 20px;
+  }
+  #controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  button {
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: #8a2be2;
+    color: white;
+    transition: 0.3s;
+  }
+  button:hover {
+    background-color: #5e1b96;
+  }
+  #finalMessage {
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 20px;
+    text-align: center;
+  }
+  #timer {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    background: rgba(0,0,0,0.5);
+    padding: 5px 10px;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+  <div id="scoreboard">Nivel: 1 | Puntaje: 0 | Mejor: 0</div>
+  <div id="gameContainer">
+    <canvas id="mazeCanvas" width="600" height="600"></canvas>
+    <div id="controls">
+      <button onclick="restartGame()">Reiniciar</button>
+      <button onclick="newMaze()">Nuevo laberinto</button>
+    </div>
+    <div id="timer">Tiempo: 0s | Mejor: 0s</div>
+  </div>
+  <div id="finalMessage"></div>
+
+<script>
+const canvas = document.getElementById("mazeCanvas");
+const ctx = canvas.getContext("2d");
+const scoreboard = document.getElementById("scoreboard");
+const finalMessage = document.getElementById("finalMessage");
+const timerDisplay = document.getElementById("timer");
+
+let rows = 10;
+let cols = 10;
+let cellSize;
+let grid = [];
+let player = {x:0, y:0};
+let goal;
+let score = 0;
+let bestScore = localStorage.getItem("bestScore") || 0;
+let level = 1;
+const maxLevel = 5;
+let teas = [];
+
+let startTime;
+let elapsedTime = 0;
+let bestTime = localStorage.getItem("bestTime") || 0;
+let timerInterval;
+
+class Cell {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.walls = [true, true, true, true];
+    this.visited = false;
+  }
+  draw() {
+    let x = this.x * cellSize;
+    let y = this.y * cellSize;
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    if (this.walls[0]) drawLine(x, y, x + cellSize, y);
+    if (this.walls[1]) drawLine(x + cellSize, y, x + cellSize, y + cellSize);
+    if (this.walls[2]) drawLine(x + cellSize, y + cellSize, x, y + cellSize);
+    if (this.walls[3]) drawLine(x, y + cellSize, x, y);
+  }
+}
+
+function drawLine(x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+function setupMaze() {
+  cellSize = Math.floor(canvas.width / cols);
+  grid = [];
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      grid.push(new Cell(x, y));
+    }
+  }
+  player = {x:0, y:0};
+  goal = {x: cols-1, y: rows-1};
+  teas = [];
+  for (let i=0; i<Math.floor(rows/2); i++) {
+    teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
+  }
+  generateMaze(grid[0]);
+  drawMaze();
+  elapsedTime = 0;
+  startTime = Date.now();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+    updateScoreboard();
+  }, 1000);
+  updateScoreboard();
+}
+
+function index(x, y) {
+  if (x < 0 || y < 0 || x > cols-1 || y > rows-1) return -1;
+  return x + y * cols;
+}
+
+function generateMaze(cell) {
+  cell.visited = true;
+  let neighbors = [
+    {cell: grid[index(cell.x, cell.y-1)], dir:0},
+    {cell: grid[index(cell.x+1, cell.y)], dir:1},
+    {cell: grid[index(cell.x, cell.y+1)], dir:2},
+    {cell: grid[index(cell.x-1, cell.y)], dir:3}
+  ];
+  neighbors = neighbors.filter(n => n.cell && !n.cell.visited);
+  while (neighbors.length > 0) {
+    let next = neighbors[Math.floor(Math.random()*neighbors.length)];
+    cell.walls[next.dir] = false;
+    next.cell.walls[(next.dir+2)%4] = false;
+    generateMaze(next.cell);
+    neighbors = [
+      {cell: grid[index(cell.x, cell.y-1)], dir:0},
+      {cell: grid[index(cell.x+1, cell.y)], dir:1},
+      {cell: grid[index(cell.x, cell.y+1)], dir:2},
+      {cell: grid[index(cell.x-1, cell.y)], dir:3}
+    ].filter(n => n.cell && !n.cell.visited);
+  }
+}
+
+function drawMaze() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  grid.forEach(c => c.draw());
+  ctx.fillStyle = "yellow";
+  ctx.fillRect(player.x*cellSize+cellSize*0.25, player.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
+  ctx.fillStyle = "red";
+  ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
+  ctx.fillStyle = "cyan";
+  teas.forEach(t => ctx.fillRect(t.x*cellSize+cellSize*0.3, t.y*cellSize+cellSize*0.3, cellSize*0.4, cellSize*0.4));
+}
+
+document.addEventListener("keydown", movePlayer);
+
+function movePlayer(e) {
+  let dx=0, dy=0;
+  if (e.key=="ArrowUp") dy=-1;
+  if (e.key=="ArrowDown") dy=1;
+  if (e.key=="ArrowLeft") dx=-1;
+  if (e.key=="ArrowRight") dx=1;
+  let current = grid[index(player.x, player.y)];
+  if (dx==0 && dy==-1 && !current.walls[0]) player.y--;
+  if (dx==1 && dy==0 && !current.walls[1]) player.x++;
+  if (dx==0 && dy==1 && !current.walls[2]) player.y++;
+  if (dx==-1 && dy==0 && !current.walls[3]) player.x--;
+
+  teas = teas.filter(t => {
+    if (t.x==player.x && t.y==player.y) {
+      score+=10;
+      updateScoreboard();
+      return false;
+    }
+    return true;
+  });
+
+  if (player.x==goal.x && player.y==goal.y) {
+    clearInterval(timerInterval);
+    if (elapsedTime < bestTime || bestTime == 0) {
+      bestTime = elapsedTime;
+      localStorage.setItem("bestTime", bestTime);
+    }
+
+    if (level < maxLevel) {
+      level++;
+      rows += 2;
+      cols += 2;
+      setupMaze();
+    } else {
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem("bestScore", bestScore);
+      }
+      finalMessage.innerHTML = `¡Ganaste! Puntaje: ${score} | Mejor: ${bestScore} | Tiempo: ${elapsedTime}s | Mejor tiempo: ${bestTime}s`;
+    }
+  }
+  drawMaze();
+}
+
+function restartGame() {
+  score = 0;
+  level = 1;
+  rows = 10;
+  cols = 10;
+  finalMessage.innerHTML = "";
+  setupMaze();
+}
+
+function newMaze() {
+  setupMaze();
+}
+
+function updateScoreboard() {
+  scoreboard.textContent = `Nivel: ${level} | Puntaje: ${score} | Mejor: ${bestScore}`;
+  timerDisplay.textContent = `Tiempo: ${elapsedTime}s | Mejor: ${bestTime}s`;
+}
+
+setupMaze();
+</script>
+</body>
+</html>
