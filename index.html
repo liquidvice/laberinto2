@@ -6,7 +6,7 @@
 <title>Alicia en el Laberinto</title>
 <style>
   body {
-    background: #111;
+    background: #222;
     margin: 0;
     padding: 0;
     font-family: 'Trebuchet MS', sans-serif;
@@ -29,7 +29,7 @@
   }
   #mazeCanvas {
     border: 3px solid white;
-    background: #222;
+    background: #111;
     margin: 20px;
   }
   #controls {
@@ -44,12 +44,12 @@
     border-radius: 8px;
     border: none;
     cursor: pointer;
-    background-color: #444;
+    background-color: #8a2be2;
     color: white;
     transition: 0.3s;
   }
   button:hover {
-    background-color: #666;
+    background-color: #5e1b96;
   }
   #finalMessage {
     font-size: 24px;
@@ -200,42 +200,79 @@ function generateMaze(cell) {
   }
 }
 
+function bfsPath(start, end) {
+  let queue = [{x:start.x, y:start.y, path:[]}];
+  let visited = new Set();
+  visited.add(start.x+","+start.y);
+
+  while(queue.length > 0) {
+    let node = queue.shift();
+    if(node.x === end.x && node.y === end.y) return node.path;
+
+    let dirs = [
+      {dx:0, dy:-1, dir:0},
+      {dx:1, dy:0, dir:1},
+      {dx:0, dy:1, dir:2},
+      {dx:-1, dy:0, dir:3}
+    ];
+
+    let current = grid[index(node.x, node.y)];
+    for(let d of dirs) {
+      if(!current.walls[d.dir]) {
+        let nx = node.x+d.dx, ny=node.y+d.dy;
+        let key = nx+","+ny;
+        if(nx>=0 && ny>=0 && nx<cols && ny<rows && !visited.has(key)) {
+          visited.add(key);
+          queue.push({x:nx, y:ny, path:[...node.path,{x:nx,y:ny}]});
+        }
+      }
+    }
+  }
+  return [];
+}
+
 function modifyMaze() {
-  // Dificultar caminos cerrando un 50% de los pasillos hacia la taza más cercana
+  if(teas.length === 0) return;
+
   let nearestTea = teas[0];
   let minDist = Infinity;
   teas.forEach(t => {
     let d = Math.abs(t.x - player.x) + Math.abs(t.y - player.y);
-    if (d < minDist) {
+    if(d < minDist) {
       minDist = d;
       nearestTea = t;
     }
   });
 
-  for (let i=0; i<grid.length; i++) {
-    if (Math.random() < 0.5) { 
-      let c = grid[i];
-      let wallToClose = Math.floor(Math.random()*4);
-      c.walls[wallToClose] = true;
+  let path = bfsPath(player, nearestTea);
+
+  let safeCells = new Set(path.map(p => p.x+","+p.y));
+  safeCells.add(player.x+","+player.y);
+  safeCells.add(nearestTea.x+","+nearestTea.y);
+  safeCells.add(goal.x+","+goal.y);
+
+  grid.forEach(c => {
+    if(!safeCells.has(c.x+","+c.y)) {
+      if(Math.random() < 0.5) {
+        let wallToClose = Math.floor(Math.random()*4);
+        c.walls[wallToClose] = true;
+      }
     }
-  }
+  });
 }
 
 function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   grid.forEach(c => c.draw());
   
-  // Jugador
   ctx.font = `${cellSize*0.7}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
 
-  // Meta
   ctx.fillStyle = "red";
   ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
   
-  // Tazas
   ctx.font = `${cellSize*0.5}px Arial`;
   teas.forEach(t => {
     ctx.fillText("☕", t.x*cellSize + cellSize/2, t.y*cellSize + cellSize/2);
@@ -267,7 +304,6 @@ function movePlayer(e) {
     return true;
   });
 
-  // 🔥 Desde nivel 4 en adelante: modificar muros al tomar taza
   if (collected.length > 0 && level >= 4) {
     modifyMaze();
   }
@@ -322,4 +358,3 @@ setupMaze();
 </script>
 </body>
 </html>
-
