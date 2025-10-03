@@ -119,7 +119,7 @@ class Cell {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.walls = [true, true, true, true];
+    this.walls = [true, true, true, true]; // top, right, bottom, left
     this.visited = false;
   }
   draw() {
@@ -141,6 +141,45 @@ function drawLine(x1, y1, x2, y2) {
   ctx.stroke();
 }
 
+function index(x, y) {
+  if (x < 0 || y < 0 || x >= cols || y >= rows) return -1;
+  return x + y * cols;
+}
+
+// 🔹 Algoritmo DFS con pila para que siempre se genere un laberinto válido
+function generateMazeDFS() {
+  let stack = [];
+  let current = grid[0];
+  current.visited = true;
+  stack.push(current);
+
+  while (stack.length > 0) {
+    let neighbors = [];
+    let {x, y} = current;
+    let top = grid[index(x, y-1)];
+    let right = grid[index(x+1, y)];
+    let bottom = grid[index(x, y+1)];
+    let left = grid[index(x-1, y)];
+
+    if (top && !top.visited) neighbors.push({cell:top, dir:0});
+    if (right && !right.visited) neighbors.push({cell:right, dir:1});
+    if (bottom && !bottom.visited) neighbors.push({cell:bottom, dir:2});
+    if (left && !left.visited) neighbors.push({cell:left, dir:3});
+
+    if (neighbors.length > 0) {
+      let next = neighbors[Math.floor(Math.random()*neighbors.length)];
+      // eliminar muros entre current y next
+      current.walls[next.dir] = false;
+      next.cell.walls[(next.dir+2)%4] = false;
+      next.cell.visited = true;
+      stack.push(current);
+      current = next.cell;
+    } else {
+      current = stack.pop();
+    }
+  }
+}
+
 function setupMaze() {
   cellSize = Math.floor(canvas.width / cols);
   grid = [];
@@ -155,8 +194,7 @@ function setupMaze() {
   for (let i=0; i<Math.floor(rows/2); i++) {
     teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
   }
-  grid.forEach(c => c.visited=false);
-  generateMaze(grid[0]);
+  generateMazeDFS();
   drawMaze();
   if (level === 1) {
     elapsedTime = 0;
@@ -170,46 +208,21 @@ function setupMaze() {
   updateScoreboard();
 }
 
-function index(x, y) {
-  if (x < 0 || y < 0 || x > cols-1 || y > rows-1) return -1;
-  return x + y * cols;
-}
-
-function generateMaze(cell) {
-  cell.visited = true;
-  let neighbors = [
-    {cell: grid[index(cell.x, cell.y-1)], dir:0},
-    {cell: grid[index(cell.x+1, cell.y)], dir:1},
-    {cell: grid[index(cell.x, cell.y+1)], dir:2},
-    {cell: grid[index(cell.x-1, cell.y)], dir:3}
-  ];
-  neighbors = neighbors.filter(n => n.cell && !n.cell.visited);
-  while (neighbors.length > 0) {
-    let next = neighbors[Math.floor(Math.random()*neighbors.length)];
-    cell.walls[next.dir] = false;
-    next.cell.walls[(next.dir+2)%4] = false;
-    generateMaze(next.cell);
-    neighbors = [
-      {cell: grid[index(cell.x, cell.y-1)], dir:0},
-      {cell: grid[index(cell.x+1, cell.y)], dir:1},
-      {cell: grid[index(cell.x, cell.y+1)], dir:2},
-      {cell: grid[index(cell.x-1, cell.y)], dir:3}
-    ].filter(n => n.cell && !n.cell.visited);
-  }
-}
-
 function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   grid.forEach(c => c.draw());
   
+  // Jugador
   ctx.font = `${cellSize*0.7}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
 
+  // Meta
   ctx.fillStyle = "red";
   ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
   
+  // Tazas
   ctx.font = `${cellSize*0.5}px Arial`;
   teas.forEach(t => {
     ctx.fillText("☕", t.x*cellSize + cellSize/2, t.y*cellSize + cellSize/2);
