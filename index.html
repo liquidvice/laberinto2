@@ -6,7 +6,7 @@
 <title>Alicia en el Laberinto</title>
 <style>
   body {
-    background: #222;
+    background: linear-gradient(135deg, #3b0066, #8a2be2);
     margin: 0;
     padding: 0;
     font-family: 'Trebuchet MS', sans-serif;
@@ -107,7 +107,7 @@ let goal;
 let score = 0;
 let bestScore = localStorage.getItem("bestScore") || 0;
 let level = 1;
-let maxLevel = 5; 
+let maxLevel = 5; // ahora son 5 niveles
 let teas = [];
 
 let startTime;
@@ -141,7 +141,7 @@ function drawLine(x1, y1, x2, y2) {
   ctx.stroke();
 }
 
-function setupMaze(keepPositions=false) {
+function setupMaze() {
   cellSize = Math.floor(canvas.width / cols);
   grid = [];
   for (let y = 0; y < rows; y++) {
@@ -149,18 +149,15 @@ function setupMaze(keepPositions=false) {
       grid.push(new Cell(x, y));
     }
   }
-  if (!keepPositions) {
-    player = {x:0, y:0};
-    goal = {x: cols-1, y: rows-1};
-    teas = [];
-    for (let i=0; i<Math.floor(rows/2); i++) {
-      teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
-    }
+  player = {x:0, y:0};
+  goal = {x: cols-1, y: rows-1};
+  teas = [];
+  for (let i=0; i<Math.floor(rows/2); i++) {
+    teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
   }
-  grid.forEach(c => c.visited=false);
   generateMaze(grid[0]);
   drawMaze();
-  if (level === 1 && !keepPositions) {
+  if (level === 1) {
     elapsedTime = 0;
     startTime = Date.now();
     clearInterval(timerInterval);
@@ -200,80 +197,24 @@ function generateMaze(cell) {
   }
 }
 
-function bfsPath(start, end) {
-  let queue = [{x:start.x, y:start.y, path:[]}];
-  let visited = new Set();
-  visited.add(start.x+","+start.y);
-
-  while(queue.length > 0) {
-    let node = queue.shift();
-    if(node.x === end.x && node.y === end.y) return node.path;
-
-    let dirs = [
-      {dx:0, dy:-1, dir:0},
-      {dx:1, dy:0, dir:1},
-      {dx:0, dy:1, dir:2},
-      {dx:-1, dy:0, dir:3}
-    ];
-
-    let current = grid[index(node.x, node.y)];
-    for(let d of dirs) {
-      if(!current.walls[d.dir]) {
-        let nx = node.x+d.dx, ny=node.y+d.dy;
-        let key = nx+","+ny;
-        if(nx>=0 && ny>=0 && nx<cols && ny<rows && !visited.has(key)) {
-          visited.add(key);
-          queue.push({x:nx, y:ny, path:[...node.path,{x:nx,y:ny}]});
-        }
-      }
-    }
-  }
-  return [];
-}
-
-function modifyMaze() {
-  if(teas.length === 0) return;
-
-  let nearestTea = teas[0];
-  let minDist = Infinity;
-  teas.forEach(t => {
-    let d = Math.abs(t.x - player.x) + Math.abs(t.y - player.y);
-    if(d < minDist) {
-      minDist = d;
-      nearestTea = t;
-    }
-  });
-
-  let path = bfsPath(player, nearestTea);
-
-  let safeCells = new Set(path.map(p => p.x+","+p.y));
-  safeCells.add(player.x+","+player.y);
-  safeCells.add(nearestTea.x+","+nearestTea.y);
-  safeCells.add(goal.x+","+goal.y);
-
-  grid.forEach(c => {
-    if(!safeCells.has(c.x+","+c.y)) {
-      if(Math.random() < 0.5) {
-        let wallToClose = Math.floor(Math.random()*4);
-        c.walls[wallToClose] = true;
-      }
-    }
-  });
-}
-
 function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   grid.forEach(c => c.draw());
   
-  ctx.font = `${cellSize*0.7}px Arial`;
+  // Jugador (princesa 👸)
+  ctx.font = ${cellSize*0.7}px Arial;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
 
+  // Meta
   ctx.fillStyle = "red";
   ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
   
-  ctx.font = `${cellSize*0.5}px Arial`;
+  // Dibujar tazas ☕ (más chicas)
+  ctx.font = ${cellSize*0.5}px Arial;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   teas.forEach(t => {
     ctx.fillText("☕", t.x*cellSize + cellSize/2, t.y*cellSize + cellSize/2);
   });
@@ -293,20 +234,14 @@ function movePlayer(e) {
   if (dx==0 && dy==1 && !current.walls[2]) player.y++;
   if (dx==-1 && dy==0 && !current.walls[3]) player.x--;
 
-  let collected = [];
   teas = teas.filter(t => {
     if (t.x==player.x && t.y==player.y) {
       score+=10;
-      collected.push(t);
       updateScoreboard();
       return false;
     }
     return true;
   });
-
-  if (collected.length > 0 && level >= 4) {
-    modifyMaze();
-  }
 
   if (player.x==goal.x && player.y==goal.y) {
     if (teas.length > 0) {
@@ -329,7 +264,7 @@ function movePlayer(e) {
           bestScore = score;
           localStorage.setItem("bestScore", bestScore);
         }
-        finalMessage.innerHTML = `🎉 ¡Ganaste! Puntaje: ${score} | Mejor: ${bestScore} | Tiempo total: ${elapsedTime}s | Mejor tiempo: ${bestTime}s`;
+        finalMessage.innerHTML = 🎉 ¡Ganaste! Puntaje: ${score} | Mejor: ${bestScore} | Tiempo total: ${elapsedTime}s | Mejor tiempo: ${bestTime}s;
       }
     }
   }
@@ -350,8 +285,8 @@ function newMaze() {
 }
 
 function updateScoreboard() {
-  scoreboard.textContent = `Nivel: ${level} | Puntaje: ${score} | Mejor: ${bestScore}`;
-  timerDisplay.textContent = `Tiempo: ${elapsedTime}s | Mejor: ${bestTime}s`;
+  scoreboard.textContent = Nivel: ${level} | Puntaje: ${score} | Mejor: ${bestScore};
+  timerDisplay.textContent = Tiempo: ${elapsedTime}s | Mejor: ${bestTime}s;
 }
 
 setupMaze();
