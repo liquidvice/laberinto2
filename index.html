@@ -6,7 +6,7 @@
 <title>Alicia en el Laberinto</title>
 <style>
   body {
-    background: linear-gradient(135deg, #3b0066, #8a2be2);
+    background: #222;
     margin: 0;
     padding: 0;
     font-family: 'Trebuchet MS', sans-serif;
@@ -107,7 +107,7 @@ let goal;
 let score = 0;
 let bestScore = localStorage.getItem("bestScore") || 0;
 let level = 1;
-let maxLevel = 5; // ahora son 5 niveles
+let maxLevel = 5; 
 let teas = [];
 
 let startTime;
@@ -155,6 +155,7 @@ function setupMaze() {
   for (let i=0; i<Math.floor(rows/2); i++) {
     teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
   }
+  grid.forEach(c => c.visited=false);
   generateMaze(grid[0]);
   drawMaze();
   if (level === 1) {
@@ -201,20 +202,15 @@ function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   grid.forEach(c => c.draw());
   
-  // Jugador (princesa 👸)
-  ctx.font = ${cellSize*0.7}px Arial;
+  ctx.font = `${cellSize*0.7}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
 
-  // Meta
   ctx.fillStyle = "red";
   ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
   
-  // Dibujar tazas ☕ (más chicas)
-  ctx.font = ${cellSize*0.5}px Arial;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.font = `${cellSize*0.5}px Arial`;
   teas.forEach(t => {
     ctx.fillText("☕", t.x*cellSize + cellSize/2, t.y*cellSize + cellSize/2);
   });
@@ -264,7 +260,7 @@ function movePlayer(e) {
           bestScore = score;
           localStorage.setItem("bestScore", bestScore);
         }
-        finalMessage.innerHTML = 🎉 ¡Ganaste! Puntaje: ${score} | Mejor: ${bestScore} | Tiempo total: ${elapsedTime}s | Mejor tiempo: ${bestTime}s;
+        finalMessage.innerHTML = `🎉 ¡Ganaste! Puntaje: ${score} | Mejor: ${bestScore} | Tiempo total: ${elapsedTime}s | Mejor tiempo: ${bestTime}s`;
       }
     }
   }
@@ -285,8 +281,8 @@ function newMaze() {
 }
 
 function updateScoreboard() {
-  scoreboard.textContent = Nivel: ${level} | Puntaje: ${score} | Mejor: ${bestScore};
-  timerDisplay.textContent = Tiempo: ${elapsedTime}s | Mejor: ${bestTime}s;
+  scoreboard.textContent = `Nivel: ${level} | Puntaje: ${score} | Mejor: ${bestScore}`;
+  timerDisplay.textContent = `Tiempo: ${elapsedTime}s | Mejor: ${bestTime}s`;
 }
 
 setupMaze();
