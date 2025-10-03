@@ -107,7 +107,7 @@ let goal;
 let score = 0;
 let bestScore = localStorage.getItem("bestScore") || 0;
 let level = 1;
-let maxLevel = 5; // ahora son 5 niveles
+let maxLevel = 5; 
 let teas = [];
 
 let startTime;
@@ -141,7 +141,7 @@ function drawLine(x1, y1, x2, y2) {
   ctx.stroke();
 }
 
-function setupMaze() {
+function setupMaze(keepPositions=false) {
   cellSize = Math.floor(canvas.width / cols);
   grid = [];
   for (let y = 0; y < rows; y++) {
@@ -149,15 +149,18 @@ function setupMaze() {
       grid.push(new Cell(x, y));
     }
   }
-  player = {x:0, y:0};
-  goal = {x: cols-1, y: rows-1};
-  teas = [];
-  for (let i=0; i<Math.floor(rows/2); i++) {
-    teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
+  if (!keepPositions) {
+    player = {x:0, y:0};
+    goal = {x: cols-1, y: rows-1};
+    teas = [];
+    for (let i=0; i<Math.floor(rows/2); i++) {
+      teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
+    }
   }
+  grid.forEach(c => c.visited=false);
   generateMaze(grid[0]);
   drawMaze();
-  if (level === 1) {
+  if (level === 1 && !keepPositions) {
     elapsedTime = 0;
     startTime = Date.now();
     clearInterval(timerInterval);
@@ -201,7 +204,7 @@ function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   grid.forEach(c => c.draw());
   
-  // Jugador (princesa 👸)
+  // Jugador
   ctx.font = `${cellSize*0.7}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -211,10 +214,8 @@ function drawMaze() {
   ctx.fillStyle = "red";
   ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
   
-  // Dibujar tazas ☕ (más chicas)
+  // Tazas
   ctx.font = `${cellSize*0.5}px Arial`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
   teas.forEach(t => {
     ctx.fillText("☕", t.x*cellSize + cellSize/2, t.y*cellSize + cellSize/2);
   });
@@ -234,14 +235,21 @@ function movePlayer(e) {
   if (dx==0 && dy==1 && !current.walls[2]) player.y++;
   if (dx==-1 && dy==0 && !current.walls[3]) player.x--;
 
+  let collected = [];
   teas = teas.filter(t => {
     if (t.x==player.x && t.y==player.y) {
       score+=10;
+      collected.push(t);
       updateScoreboard();
       return false;
     }
     return true;
   });
+
+  // 🔥 Desde nivel 4 en adelante, regenerar el laberinto al tomar una taza
+  if (collected.length > 0 && level >= 4) {
+    setupMaze(true); 
+  }
 
   if (player.x==goal.x && player.y==goal.y) {
     if (teas.length > 0) {
@@ -293,3 +301,4 @@ setupMaze();
 </script>
 </body>
 </html>
+
