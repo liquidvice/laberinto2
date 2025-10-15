@@ -31,6 +31,7 @@
     border: 3px solid white;
     background: #111;
     margin: 20px;
+    transition: transform 0.5s ease;
   }
   #controls {
     display: flex;
@@ -121,7 +122,7 @@ class Cell {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.walls = [true, true, true, true]; // top, right, bottom, left
+    this.walls = [true, true, true, true];
     this.visited = false;
   }
   draw() {
@@ -215,23 +216,19 @@ function drawMaze() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   grid.forEach(c => c.draw());
   
-  // Jugador
   ctx.font = `${cellSize*0.7}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
 
-  // Meta
   ctx.fillStyle = "red";
   ctx.fillRect(goal.x*cellSize+cellSize*0.25, goal.y*cellSize+cellSize*0.25, cellSize*0.5, cellSize*0.5);
-  
-  // Tazas
+
   ctx.font = `${cellSize*0.5}px Arial`;
   teas.forEach(t => {
     ctx.fillText("☕", t.x*cellSize + cellSize/2, t.y*cellSize + cellSize/2);
   });
 
-  // Gato de Cheshire
   if(cheshireCat){
     ctx.fillText("😸", cheshireCat.x*cellSize + cellSize/2, cheshireCat.y*cellSize + cellSize/2);
   }
@@ -299,6 +296,7 @@ function restartGame() {
   cols = 10;
   finalMessage.innerHTML = "";
   canvas.style.background = "#111";
+  canvas.style.transform = "rotate(0deg)";
   document.removeEventListener("keydown", movePlayerIlogico);
   document.addEventListener("keydown", movePlayer);
   setupMaze();
@@ -313,22 +311,19 @@ function updateScoreboard() {
   timerDisplay.textContent = `Tiempo: ${elapsedTime}s | Mejor: ${bestTime}s`;
 }
 
-// Nivel ilógico
 function startIlogicoLevel(){
-  rows = 10;
-  cols = 10;
+  rows = 14; // más grande como nivel 3
+  cols = 14;
   setupMaze();
   canvas.style.background = "radial-gradient(circle, #ff00ff, #00ffff, #ffff00)";
+  canvas.style.transform = "rotate(180deg)"; // laberinto de cabeza
   finalMessage.innerHTML = "🌈 Entraste al País de las Maravillas 🌈<br>¡Controles invertidos y el Gato de Cheshire!";
 
-  // Invertir controles
   document.removeEventListener("keydown", movePlayer);
   document.addEventListener("keydown", movePlayerIlogico);
 
-  // Posición aleatoria del Gato de Cheshire
   cheshireCat = {x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)};
   
-  // Mover gato aleatoriamente cada 1-2 segundos
   cheshireInterval = setInterval(()=>{
     cheshireCat.x = Math.floor(Math.random()*cols);
     cheshireCat.y = Math.floor(Math.random()*rows);
