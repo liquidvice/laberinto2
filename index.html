@@ -31,7 +31,7 @@
     border: 3px solid white;
     background: #111;
     margin: 20px;
-    transition: transform 0.5s ease;
+    transition: transform 0.1s linear;
   }
   #controls {
     display: flex;
@@ -108,10 +108,16 @@ let goal;
 let score = 0;
 let bestScore = localStorage.getItem("bestScore") || 0;
 let level = 1;
-let maxLevel = 6; // Nivel final ilógico
+let maxLevel = 6;
 let teas = [];
 let cheshireCat = null;
 let cheshireInterval = null;
+let rotationAngle = 0;
+let rotationInterval = null;
+let rotationSpeed = 2;
+let zoomScale = 1;
+let zoomDirection = 0.005;
+let blinkTime = 0;
 
 let startTime;
 let elapsedTime = 0;
@@ -194,6 +200,12 @@ function setupMaze() {
   teas = [];
   cheshireCat = null;
   clearInterval(cheshireInterval);
+  clearInterval(rotationInterval);
+  rotationAngle = 0;
+  rotationSpeed = 2;
+  zoomScale = 1;
+  blinkTime = 0;
+  canvas.style.transform = "rotate(0deg) scale(1)";
 
   for (let i=0; i<Math.floor(rows/2); i++) {
     teas.push({x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)});
@@ -226,8 +238,14 @@ function drawMaze() {
 
   ctx.font = `${cellSize*0.5}px Arial`;
   teas.forEach(t => {
+    if(level===6){
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(blinkTime + (t.x+t.y));
+    } else {
+      ctx.globalAlpha = 1;
+    }
     ctx.fillText("☕", t.x*cellSize + cellSize/2, t.y*cellSize + cellSize/2);
   });
+  ctx.globalAlpha = 1;
 
   if(cheshireCat){
     ctx.fillText("😸", cheshireCat.x*cellSize + cellSize/2, cheshireCat.y*cellSize + cellSize/2);
@@ -274,6 +292,7 @@ function movePlayer(e) {
         }
       } else {
         clearInterval(timerInterval);
+        clearInterval(rotationInterval);
         if (elapsedTime < bestTime || bestTime == 0) {
           bestTime = elapsedTime;
           localStorage.setItem("bestTime", bestTime);
@@ -287,6 +306,7 @@ function movePlayer(e) {
     }
   }
   drawMaze();
+  blinkTime += 0.1;
 }
 
 function restartGame() {
@@ -296,7 +316,7 @@ function restartGame() {
   cols = 10;
   finalMessage.innerHTML = "";
   canvas.style.background = "#111";
-  canvas.style.transform = "rotate(0deg)";
+  canvas.style.transform = "rotate(0deg) scale(1)";
   document.removeEventListener("keydown", movePlayerIlogico);
   document.addEventListener("keydown", movePlayer);
   setupMaze();
@@ -311,13 +331,13 @@ function updateScoreboard() {
   timerDisplay.textContent = `Tiempo: ${elapsedTime}s | Mejor: ${bestTime}s`;
 }
 
+// Nivel 6 con rotación, zoom pulsante y tazas parpadeantes
 function startIlogicoLevel(){
-  rows = 14; // más grande como nivel 3
+  rows = 14;
   cols = 14;
   setupMaze();
   canvas.style.background = "radial-gradient(circle, #ff00ff, #00ffff, #ffff00)";
-  canvas.style.transform = "rotate(180deg)"; // laberinto de cabeza
-  finalMessage.innerHTML = "🌈 Entraste al País de las Maravillas 🌈<br>¡Controles invertidos y el Gato de Cheshire!";
+  finalMessage.innerHTML = "🌈 Entraste al País de las Maravillas 🌈<br>¡El laberinto gira y el Gato de Cheshire aparece!";
 
   document.removeEventListener("keydown", movePlayer);
   document.addEventListener("keydown", movePlayerIlogico);
@@ -329,6 +349,20 @@ function startIlogicoLevel(){
     cheshireCat.y = Math.floor(Math.random()*rows);
     drawMaze();
   }, 1500);
+
+  rotationInterval = setInterval(()=>{
+    rotationAngle += rotationSpeed;
+    if(rotationAngle >= 360) rotationAngle = 0;
+    zoomScale += zoomDirection;
+    if(zoomScale > 1.05 || zoomScale < 0.95) zoomDirection *= -1;
+    drawMaze();
+    canvas.style.transform = `rotate(${rotationAngle}deg) scale(${zoomScale})`;
+    blinkTime += 0.1;
+  }, 100);
+
+  setInterval(()=>{
+    rotationSpeed = 1 + Math.floor(Math.random()*5);
+  }, 1000);
 }
 
 function movePlayerIlogico(e){
@@ -356,6 +390,7 @@ function movePlayerIlogico(e){
   if(player.x==goal.x && player.y==goal.y){
     document.removeEventListener("keydown", movePlayerIlogico);
     clearInterval(cheshireInterval);
+    clearInterval(rotationInterval);
     finalMessage.innerHTML = `🎉 ¡Ganaste el País de las Maravillas! Puntaje final: ${score} | Mejor: ${bestScore}`;
   }
 
