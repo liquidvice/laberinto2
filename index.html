@@ -56,11 +56,8 @@
     <span id="scoreDisplay">Puntaje: 0</span> · <span id="bestDisplay">Mejor: 0</span>
   </div>
 </div>
-
 <script>
-/* ------------------------------
-   Estado global y referencias
-   ------------------------------*/
+// Estado global y referencias
 const canvas = document.getElementById('mazeCanvas');
 const ctx = canvas.getContext('2d');
 const scoreboard = document.getElementById('scoreboard');
@@ -101,10 +98,7 @@ let disappearing = false;
 let oscAmplitude = 0.25; // radians max amplitude (about 14 degrees) - will be raised for faster feel
 let oscFrequency = 0.0025; // controls speed; higher => faster oscillation (time-based multiplier)
 let oscStart = performance.now(); // base time
-
-/* ------------------------------
-   Helpers: Cell, index, random
-   ------------------------------*/
+/* Helpers: Cell, index, random */
 class Cell {
   constructor(x,y){
     this.x=x; this.y=y;
@@ -112,15 +106,14 @@ class Cell {
     this.visited=false;
   }
 }
+
 function idx(x,y){
   if(x<0||y<0||x>=cols||y>=rows) return -1;
   return x + y*cols;
 }
 function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
 
-/* ------------------------------
-   Maze generation (DFS stack)
-   ------------------------------*/
+/* Maze generation (DFS stack) */
 function generateMazeDFS(){
   grid.forEach(c=>c.visited=false);
   const stack = [];
@@ -151,9 +144,7 @@ function generateMazeDFS(){
   }
 }
 
-/* ------------------------------
-   Setup maze, teas, timers
-   ------------------------------*/
+/* Setup maze, teas, timers */
 function setupMaze(){
   cellSize = Math.floor(canvas.width / cols);
   grid = [];
@@ -195,16 +186,50 @@ function setupMaze(){
   updateScoreboard();
 }
 
-/* ------------------------------
-   UI helpers
-   ------------------------------*/
-function updateScoreboard(){
-  scoreboard.innerText = `Nivel: ${level}${isWonderland ? ' (País de las Maravillas)' : ''} | Puntaje: ${score} | Mejor: ${bestScore}`;
-  scoreEl.innerText = `Puntaje: ${score}`;
-  bestEl.innerText = `Mejor: ${bestScore}`;
-  timerEl.innerText = `Tiempo: ${elapsedTime}s`;
+/* Drawing helpers */
+function drawLine(x1,y1,x2,y2){
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
 }
 
+/* ------------------------------
+   Draw maze and walls
+------------------------------*/
+function drawMazeOnce(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // draw walls
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  for(const c of grid){
+    const x = c.x*cellSize, y = c.y*cellSize;
+    if(c.walls[0]) drawLine(x,y,x+cellSize,y);
+    if(c.walls[1]) drawLine(x+cellSize,y,x+cellSize,y+cellSize);
+    if(c.walls[2]) drawLine(x+cellSize,y+cellSize,x,y+cellSize);
+    if(c.walls[3]) drawLine(x,y+cellSize,x,y);
+  }
+
+  // draw teas
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${Math.floor(cellSize*0.55)}px Arial`;
+  for(const t of teas){
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#ffff88";
+    ctx.fillText("☕", t.x*cellSize + cellSize/2, t.y*cellSize + cellSize/2);
+  }
+
+  // draw player
+  ctx.font = `${Math.floor(cellSize*0.75)}px Arial`;
+  ctx.fillStyle = "#ffff77";
+  ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
+
+  // draw goal
+  ctx.fillStyle = isWonderland ? "#00ff88" : "#ff4444";
+  ctx.fillRect(goal.x*cellSize + cellSize*0.2, goal.y*cellSize + cellSize*0.2, cellSize*0.6, cellSize*0.6);
+}
 /* ------------------------------
    Input & movement (works while canvas rotates)
    ------------------------------*/
@@ -324,7 +349,7 @@ enterBtn.addEventListener('click', ()=>{
    ------------------------------*/
 setupMaze();
 updateScoreboard();
-
 </script>
 </body>
 </html>
+
