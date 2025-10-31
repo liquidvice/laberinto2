@@ -242,7 +242,7 @@ function drawMazeOnce(){
   // draw teas
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = ${Math.floor(cellSize*0.55)}px Arial;
+  ctx.font = `${Math.floor(cellSize*0.55)}px Arial`;
   for(const t of teas){
     if(isWonderland){
       const alpha = 0.15 + 0.85*Math.abs(Math.sin((Date.now()/80) + (t.x + t.y)));
@@ -257,7 +257,7 @@ function drawMazeOnce(){
   ctx.globalAlpha = 1;
 
   // draw player
-  ctx.font = ${Math.floor(cellSize*0.75)}px Arial;
+  ctx.font = `${Math.floor(cellSize*0.75)}px Arial`;
   ctx.fillStyle = "#ffff77";
   ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
 
@@ -267,7 +267,7 @@ function drawMazeOnce(){
 
   // draw cheshire if applicable
   if(isWonderland && cheshirePos && cheshireVisible){
-    ctx.font = ${Math.floor(cellSize*0.9)}px Arial;
+    ctx.font = `${Math.floor(cellSize*0.9)}px Arial`;
     ctx.fillStyle = "#fff";
     ctx.fillText("😸", cheshirePos.x*cellSize + cellSize/2, cheshirePos.y*cellSize + cellSize/2 - (cellSize*0.05));
   }
@@ -280,32 +280,27 @@ function drawMazeOnce(){
    (drawn inside canvas; does not move)
    ------------------------------*/
 function drawHeatBackgroundStatic(){
-  // Draw a radial rainbow-ish gradient to emulate "heat" pattern.
-  // We'll draw once per frame (cheap) — it's static visually but blends with maze.
   const w = canvas.width, h = canvas.height;
-  // base: radial gradient center with multiple stops rainbow
   const rg = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*0.05, w/2, h/2, Math.max(w,h)*0.75);
-  rg.addColorStop(0, "rgba(255,200,100,0.22)"); // warm center
+  rg.addColorStop(0, "rgba(255,200,100,0.22)");
   rg.addColorStop(0.15, "rgba(255,120,50,0.16)");
   rg.addColorStop(0.30, "rgba(255,60,160,0.12)");
   rg.addColorStop(0.45, "rgba(160,60,255,0.10)");
   rg.addColorStop(0.60, "rgba(60,200,255,0.08)");
   rg.addColorStop(0.75, "rgba(100,255,120,0.06)");
   rg.addColorStop(1, "rgba(255,255,255,0.02)");
-  // fill with subtle overlay
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.fillStyle = rg;
   ctx.fillRect(0,0,w,h);
 
-  // add concentric soft rings to mimic heat layers (static)
   ctx.globalCompositeOperation = 'overlay';
   const rings = 6;
   for(let i=1;i<=rings;i++){
     const alpha = 0.03 * (1 - i/rings);
     ctx.beginPath();
     ctx.arc(w/2, h/2, (i * Math.min(w,h) * 0.12), 0, Math.PI*2);
-    ctx.strokeStyle = rgba(${Math.floor(200 - i*20)},${Math.floor(100 + i*20)},${Math.floor(150 + i*10)},${alpha});
+    ctx.strokeStyle = `rgba(${Math.floor(200 - i*20)},${Math.floor(100 + i*20)},${Math.floor(150 + i*10)},${alpha})`;
     ctx.lineWidth = 30;
     ctx.stroke();
   }
@@ -317,23 +312,18 @@ function drawHeatBackgroundStatic(){
    ------------------------------*/
 function wonderlandLoop(){
   if(!isWonderland) return;
-  // compute time-based oscillation angle (sinusoidal)
   const t = performance.now() - oscStart;
-  // amplitude and frequency are chosen to be perceptible but playable
   const angle = targetAmplitude * Math.sin(t * targetFrequency * 2 * Math.PI);
-  rotationAngle = angle; // not used as accumulated, but for compatibility draw functions
+  rotationAngle = angle;
 
-  // draw using current rotationAngle
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
   ctx.translate(canvas.width/2, canvas.height/2);
   ctx.rotate(rotationAngle);
   ctx.translate(-canvas.width/2, -canvas.height/2);
 
-  // draw heat background (static)
   drawHeatBackgroundStatic();
 
-  // draw walls
   ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
   for(const c of grid){
@@ -344,8 +334,7 @@ function wonderlandLoop(){
     if(c.walls[3]) drawLine(x,y+cellSize,x,y);
   }
 
-  // teas (fast blink)
-  ctx.font = ${Math.floor(cellSize*0.55)}px Arial;
+  ctx.font = `${Math.floor(cellSize*0.55)}px Arial`;
   for(const tcell of teas){
     const alpha = 0.12 + 0.88 * Math.abs(Math.sin((Date.now()/70) + (tcell.x + tcell.y)));
     ctx.globalAlpha = alpha;
@@ -355,25 +344,21 @@ function wonderlandLoop(){
   }
   ctx.globalAlpha = 1;
 
-  // player
-  ctx.font = ${Math.floor(cellSize*0.75)}px Arial;
+  ctx.font = `${Math.floor(cellSize*0.75)}px Arial`;
   ctx.fillStyle = "#ffff77";
   ctx.fillText("👸", player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2);
 
-  // goal
   ctx.fillStyle = "lime";
   ctx.fillRect(goal.x*cellSize + cellSize*0.2, goal.y*cellSize + cellSize*0.2, cellSize*0.6, cellSize*0.6);
 
-  // cheshire
   if(cheshirePos && cheshireVisible){
-    ctx.font = ${Math.floor(cellSize*0.9)}px Arial;
+    ctx.font = `${Math.floor(cellSize*0.9)}px Arial`;
     ctx.fillStyle = "#fff";
     ctx.fillText("😸", cheshirePos.x*cellSize + cellSize/2, cheshirePos.y*cellSize + cellSize/2 - (cellSize*0.05));
   }
 
   ctx.restore();
 
-  // if disappearing we gradually fade canvas (not used here, kept for safety)
   if(disappearing){
     canvas.style.opacity = Math.max(0, (parseFloat(canvas.style.opacity||1) - 0.01));
   }
@@ -385,7 +370,7 @@ function wonderlandLoop(){
    Input & movement (works while canvas rotates)
    ------------------------------*/
 function onKeyDownMain(e){
-  if(disappearing) return; // if in disappearance, ignore
+  if(disappearing) return;
   let dx=0, dy=0;
   if(e.key === 'ArrowUp') dy = -1;
   if(e.key === 'ArrowDown') dy = 1;
@@ -393,7 +378,6 @@ function onKeyDownMain(e){
   if(e.key === 'ArrowRight') dx = 1;
 
   if(isWonderland){
-    // invert controls (as requested earlier)
     dx = -dx; dy = -dy;
   }
 
@@ -403,141 +387,59 @@ function onKeyDownMain(e){
   if(dx===0 && dy===1 && !cur.walls[2]) player.y++;
   if(dx===-1 && dy===0 && !cur.walls[3]) player.x--;
 
-  // clamp
   if(player.x < 0) player.x = 0;
   if(player.x > cols-1) player.x = cols-1;
   if(player.y < 0) player.y = 0;
   if(player.y > rows-1) player.y = rows-1;
 
-  // pick up teas
   for(let i=teas.length-1;i>=0;i--){
     if(teas[i].x === player.x && teas[i].y === player.y){
       teas.splice(i,1);
       score += 10;
       updateScoreboard();
-      // no time bonus (removed per request)
     }
   }
 
-  // reached goal?
   if(player.x === goal.x && player.y === goal.y){
     if(teas.length > 0){
       warning.innerText = "⚠️ Te faltan tazas por recoger";
       setTimeout(()=> warning.innerText = "", 1600);
     } else {
-      if(!isWonderland){
-        if(level < maxLevel){
-          level++;
-          rows += 2; cols += 2;
-          setupMaze();
-        } else {
-          enterBtn.style.display = 'inline-block';
-          finalMessage.innerText = 'Completaste los 5 niveles. ¿Listo para el País de las Maravillas?';
-        }
-      } else {
-        // finished level 6
+      level++;
+      if(level > maxLevel){
         stopWonderland();
-        finalMessage.innerText = 🎉 ¡Ganaste el País de las Maravillas! Puntaje: ${score};
-        if(score > bestScore){ bestScore = score; localStorage.setItem('bestScore', String(bestScore)); updateScoreboard(); }
+        finalMessage.innerHTML = "¡Ganaste el laberinto! 🎉";
+        return;
       }
+      setupMaze();
     }
   }
 
-  if(!isWonderland) drawMazeOnce();
-}
-
-/* ------------------------------
-   Start / Stop level 6 (wonderland)
-   ------------------------------*/
-function startWonderland(){
-  isWonderland = true;
-  level = 6;
-  rows = 14; cols = 14; // difficulty equal to level 3
-  cellSize = Math.floor(canvas.width / cols);
-
-  // setup maze freshly (this will call stopWonderland internally)
-  setupMaze();
-
-  // cheshire moves every 1.5s and toggles visibility
-  cheshirePos = { x: randInt(0, cols-1), y: randInt(0, rows-1) };
-  cheshireVisible = true;
-  if(cheshireInterval) clearInterval(cheshireInterval);
-  cheshireInterval = setInterval(()=>{
-    cheshirePos.x = Math.floor(Math.random()*cols);
-    cheshirePos.y = Math.floor(Math.random()*rows);
-    cheshireVisible = Math.random() > 0.25; // 75% visible
-  },1500);
-
-  // set oscillation parameters to be stronger but playable
-  targetAmplitude = 0.45; // about 26 degrees max
-  targetFrequency = 0.008; // faster oscillation for more "spin" feeling
-  oscStart = performance.now();
-
-  // start RAF loop
-  if(rafId) cancelAnimationFrame(rafId);
-  rafId = requestAnimationFrame(wonderlandLoop);
-
-  // UI changes
-  finalMessage.innerText = "🌈 Entraste al País de las Maravillas 🌈";
-  enterBtn.style.display = 'none';
-  updateScoreboard();
-}
-
-/* stop wonderland and cleanup */
-function stopWonderland(){
-  isWonderland = false;
-  if(cheshireInterval){ clearInterval(cheshireInterval); cheshireInterval = null; }
-  if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
-  cheshirePos = null;
-  cheshireVisible = true;
-  disappearing = false;
-  // reset display properties if needed
-  canvas.style.opacity = '1';
-  // reset rotation parameters to defaults
-  targetAmplitude = 0.5;
-  targetFrequency = 0.0045;
   drawMazeOnce();
 }
 
-/* ------------------------------
-   UI helpers
-   ------------------------------*/
 function updateScoreboard(){
-  scoreboard.innerText = Nivel: ${level}${isWonderland ? ' (País de las Maravillas)' : ''} | Puntaje: ${score} | Mejor: ${bestScore};
-  scoreEl.innerText = Puntaje: ${score};
-  bestEl.innerText = Mejor: ${bestScore};
-  timerEl.innerText = Tiempo: ${elapsedTime}s;
+  scoreEl.innerText = `Puntaje: ${score}`;
+  bestEl.innerText = `Mejor: ${bestScore}`;
+  scoreboard.innerHTML = `Nivel: ${level} | Puntaje: ${score} | Mejor: ${bestScore}`;
 }
 
-/* ------------------------------
-   UI bindings
-   ------------------------------*/
-window.addEventListener('keydown', onKeyDownMain);
+function stopWonderland(){
+  isWonderland = false;
+  cancelAnimationFrame(rafId);
+  clearInterval(cheshireInterval);
+}
 
-btnRestart.addEventListener('click', ()=>{
-  // full restart
-  stopWonderland();
-  level = 1; rows = 10; cols = 10; score = 0;
-  finalMessage.innerText = '';
-  enterBtn.style.display = 'none';
+function startWonderland(){
+  isWonderland = true;
+  oscStart = performance.now();
   setupMaze();
-  updateScoreboard();
-});
+  wonderlandLoop();
+}
 
-btnNew.addEventListener('click', ()=>{
-  setupMaze();
-});
-
-enterBtn.addEventListener('click', ()=>{
-  enterBtn.style.display = 'none';
-  startWonderland();
-});
-
-/* ------------------------------
-   Init
-   ------------------------------*/
-setupMaze();
-updateScoreboard();
+document.addEventListener("keydown",onKeyDownMain);
+btnRestart.addEventListener("click",()=>setupMaze());
+btnNew.addEventListener("click",()=>{ setupMaze(); });
 
 </script>
 </body>
